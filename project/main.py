@@ -1,16 +1,15 @@
 import os
-import io
 import re
+import json
 import time
 import shutil
-import zipfile
+import base64
 from datetime import datetime
 from typing import Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Header, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -31,6 +30,63 @@ app.add_middleware(
 )
 
 init_db()
+
+
+def build_manifest(row: dict) -> str:
+    manifest = {
+        "manifest_version": 3,
+        "name": row["name"],
+        "version": row["version"] or "1.0",
+        "description": row["description"] or "",
+        "author": row["author"] or "",
+        "content_scripts": [{
+            "matches": ["<all_urls>"],
+            "js": ["inject.js"]
+        }]
+    }
+    icon = row.get("icon_filename") or ""
+    if icon:
+        manifest["action"] = {"default_icon": {"128": icon}}
+    return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
+
+
+def cleanup_project_folder(folder_path: str, icon_filename: str):
+    allowed = {"manifest.json", "inject.js"}
+    if icon_filename:
+        allowed.add(icon_filename)
+    if not os.path.exists(folder_path):
+        return
+    for fname in os.listdir(folder_path):
+        if fname not in allowed:
+            try:
+                os.remove(os.path.join(folder_path, fname))
+            except OSError:
+                pass
+
+
+def write_project_files(folder_path: str, row: dict, inject_content: str = None):
+    os.makedirs(folder_path, exist_ok=True)
+    icon = row.get("icon_filename") or ""
+    cleanup_project_folder(folder_path, icon)
+    with open(os.path.join(folder_path, "manifest.json"), "w", encoding="utf-8") as f:
+        f.write(build_manifest(row))
+    if inject_content is not None and inject_content.strip():
+        with open(os.path.join(folder_path, "inject.js"), "w", encoding="utf-8") as f:
+            f.write(inject_content)
+
+
+def refresh_project_manifest(conn, project_id: int, user_id: int):
+    row = conn.execute("SELECT * FROM projects WHERE id=? AND user_id=?", (project_id, user_id)).fetchone()
+    if not row:
+        return
+    row = dict(row)
+    folder_path = get_project_folder(user_id, row["folder_name"])
+    inject_path = os.path.join(folder_path, "inject.js")
+    inject_content = None
+    if os.path.exists(inject_path):
+        with open(inject_path, "r", encoding="utf-8") as f:
+            inject_content = f.read()
+    write_project_files(folder_path, row, inject_content)
 
 
 # ── Auth dependency ────────────────────────────────────────────────────────────
@@ -272,6 +328,7 @@ async def update_project(project_id: int, data: ProjectUpdateModel, user=Depends
         values = list(updates.values()) + [project_id]
         conn.execute(f"UPDATE projects SET {set_clause} WHERE id=?", values)
         conn.commit()
+        refresh_project_manifest(conn, project_id, user["id"])
         row = conn.execute("SELECT * FROM projects WHERE id=?", (project_id,)).fetchone()
         return dict(row)
     finally:
@@ -304,16 +361,19 @@ async def save_generated_files(project_id: int, data: SaveFilesModel, user=Depen
     if not row:
         conn.close()
         raise HTTPException(404, "Project not found")
+    row = dict(row)
     folder_path = get_project_folder(user["id"], row["folder_name"])
-    os.makedirs(folder_path, exist_ok=True)
-    with open(os.path.join(folder_path, "manifest.json"), "w", encoding="utf-8") as f:
-        f.write(data.manifest_content)
-    with open(os.path.join(folder_path, "inject.js"), "w", encoding="utf-8") as f:
-        f.write(data.inject_content)
+    if not data.inject_content or not data.inject_content.strip():
+        conn.close()
+        raise HTTPException(400, "inject.js content is required")
+    write_project_files(folder_path, row, data.inject_content)
     conn.execute("UPDATE projects SET updated_at=? WHERE id=?", (datetime.now().isoformat(), project_id))
     conn.commit()
     conn.close()
-    return {"message": "Files saved", "files": ["manifest.json", "inject.js"]}
+    files = ["manifest.json", "inject.js"]
+    if row.get("icon_filename"):
+        files.append(row["icon_filename"])
+    return {"message": "Files saved", "files": files}
 
 
 @app.post("/api/projects/{project_id}/save-file")
@@ -345,17 +405,30 @@ async def upload_icon(project_id: int, file: UploadFile = File(...), user=Depend
     if ext not in [".png", ".jpg", ".jpeg", ".svg", ".gif"]:
         conn.close()
         raise HTTPException(400, "Invalid file type")
-    icon_filename = f"icon{ext}"
+    raw_name = os.path.basename(file.filename or "")
+    if not raw_name:
+        conn.close()
+        raise HTTPException(400, "Invalid filename")
+    icon_filename = re.sub(r"[^\w.\-]", "_", raw_name)
     folder_path = get_project_folder(user["id"], row["folder_name"])
     os.makedirs(folder_path, exist_ok=True)
+    old_icon = row["icon_filename"]
+    if old_icon and old_icon != icon_filename:
+        old_path = os.path.join(folder_path, old_icon)
+        if os.path.exists(old_path):
+            os.remove(old_path)
     content = await file.read()
     with open(os.path.join(folder_path, icon_filename), "wb") as f:
         f.write(content)
     conn.execute("UPDATE projects SET icon_filename=?, updated_at=? WHERE id=?",
                  (icon_filename, datetime.now().isoformat(), project_id))
     conn.commit()
+    refresh_project_manifest(conn, project_id, user["id"])
     conn.close()
     return {"message": "Icon uploaded", "icon_filename": icon_filename}
+
+
+TEXT_EXTENSIONS = {".json", ".js", ".css", ".html", ".txt", ".md", ".svg"}
 
 
 @app.get("/api/projects/{project_id}/download")
@@ -377,15 +450,19 @@ async def download_project(project_id: int, user=Depends(get_optional_user)):
     conn.execute("UPDATE projects SET downloads=downloads+1 WHERE id=?", (project_id,))
     conn.commit()
     conn.close()
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for root, _, files in os.walk(folder_path):
-            for fname in files:
-                fpath = os.path.join(root, fname)
-                zf.write(fpath, os.path.relpath(fpath, folder_path))
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{row["folder_name"]}.zip"'})
+    files = []
+    for root, _, fnames in os.walk(folder_path):
+        for fname in fnames:
+            fpath = os.path.join(root, fname)
+            rel_name = os.path.relpath(fpath, folder_path).replace("\\", "/")
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in TEXT_EXTENSIONS:
+                with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                    files.append({"name": rel_name, "content": f.read(), "encoding": "text"})
+            else:
+                with open(fpath, "rb") as f:
+                    files.append({"name": rel_name, "content": base64.b64encode(f.read()).decode(), "encoding": "base64"})
+    return {"folder_name": row["folder_name"], "files": files}
 
 
 @app.get("/api/projects/{project_id}/files")

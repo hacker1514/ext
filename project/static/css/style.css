@@ -177,6 +177,8 @@ body {
 .form-group { margin-bottom:20px; }
 .form-label { display:block; font-size:.875rem; font-weight:600; color:var(--txt2);
   margin-bottom:8px; }
+
+
 .form-input, .form-select, .form-textarea {
   width:100%; padding:12px 16px; background:rgba(255,255,255,0.06);
   border:1px solid var(--border); border-radius:var(--radius-sm);
@@ -186,6 +188,8 @@ body {
 .form-input::placeholder, .form-textarea::placeholder { color:var(--txt3); }
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,0.15); }
+
+
 .form-select { cursor:pointer; appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 14px center;
@@ -523,3 +527,18 @@ body {
 
 .container { width:100%; max-width:1100px; margin:0 auto; padding:0 20px; }
 .center { display:flex; align-items:center; justify-content:center; }
+
+
+/* extra */
+/* Ensure dropdown options are readable */
+.form-select option {
+  background-color: #0d1424; /* Should match --bg2 */
+  color: #f1f5f9;            /* Should match --txt */
+  padding: 10px;
+}
+
+/* Fix for focus/hover on options in some browsers */
+.form-select:focus {
+  background-color: #0d1424;
+  color: #f1f5f9;
+}

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>🔰𝙽𝙸𝚁𝙰𝙽𝙹𝙰𝙽 𝙲𝚁𝙴𝙰𝚃𝙸𝙾𝙽𝚂🔰</title>
 <link rel="icon" href="logo.png">
+<link rel="manifest" href="kni.json">
 <link rel="stylesheet" href="/css/style.css">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -61,6 +62,7 @@
     <span>𝙾𝚁𝙶𝙰𝙽𝙸𝚉𝙰𝚃𝙸𝙾𝙽</span>
   </a>
   <div class="landing-nav-links">
+    <a onclick="install()">𝙸𝚗𝚜𝚝𝚊𝚕𝚕</a>
     <a href="/browse.html">𝙱𝚛𝚘𝚠𝚜𝚎</a>
     <a href="/login.html" class="btn-nav-login">𝙻𝚘𝚐𝚒𝚗</a>
     <a href="/register.html" class="btn-nav-start">𝙶𝚎𝚝 𝚂𝚝𝚊𝚛𝚝𝚎𝚍</a>
@@ -97,7 +99,7 @@
     <div class="feat"><div class="feat-icon">🤖</div><div class="feat-title">𝙰𝙸 𝙶𝚎𝚗𝚎𝚛𝚊𝚝𝚒𝚘𝚗</div><div class="feat-desc">𝙶𝚎𝚗𝚎𝚛𝚊𝚝𝚎 𝚎𝚡𝚝𝚎𝚗𝚜𝚒𝚘𝚗𝚜 𝚏𝚛𝚘𝚖 𝚗𝚊𝚝𝚞𝚛𝚊𝚕 𝚕𝚊𝚗𝚐𝚞𝚊𝚐𝚎 𝚟𝚒𝚊 𝙶𝚛𝚘𝚚 𝙰𝙸</div></div>
     <div class="feat"><div class="feat-icon">📁</div><div class="feat-title">𝚂𝚎𝚛𝚟𝚎𝚛 𝚂𝚝𝚘𝚛𝚊𝚐𝚎</div><div class="feat-desc">𝙵𝚒𝚕𝚎𝚜 𝚜𝚊𝚟𝚎𝚍 𝚒𝚗 𝚢𝚘𝚞𝚛 𝚘𝚠𝚗 𝚜𝚎𝚛𝚟𝚎𝚛 𝚏𝚘𝚕𝚍𝚎𝚛</div></div>
     <div class="feat"><div class="feat-icon">🌍</div><div class="feat-title">𝙿𝚞𝚋𝚕𝚒𝚜𝚑 & 𝚂𝚑𝚊𝚛𝚎</div><div class="feat-desc">𝙼𝚊𝚔𝚎 𝚢𝚘𝚞𝚛 𝚎𝚡𝚝𝚎𝚗𝚜𝚒𝚘𝚗 𝚙𝚞𝚋𝚕𝚒𝚌 𝚏𝚘𝚛 𝚎𝚟𝚎𝚛𝚢𝚘𝚗𝚎</div></div>
-    <div class="feat"><div class="feat-icon">📦</div><div class="feat-title">𝚉𝙸𝙿 𝙳𝚘𝚠𝚗𝚕𝚘𝚊𝚍</div><div class="feat-desc">𝙳𝚘𝚠𝚗𝚕𝚘𝚊𝚍 𝚊𝚗𝚢 𝚎𝚡𝚝𝚎𝚗𝚜𝚒𝚘𝚗 𝚊𝚜 𝚊 𝚛𝚎𝚊𝚍𝚢-𝚝𝚘-𝚞𝚜𝚎 𝚉𝙸𝙿</div></div>
+    <div class="feat"><div class="feat-icon">📁</div><div class="feat-title">𝙵𝚘𝚕𝚍𝚎𝚛 𝙳𝚘𝚠𝚗𝚕𝚘𝚊𝚍</div><div class="feat-desc">𝙳𝚘𝚠𝚗𝚕𝚘𝚊𝚍 𝚊𝚗𝚢 𝚎𝚡𝚝𝚎𝚗𝚜𝚒𝚘𝚗 𝚊𝚜 𝚊 𝚛𝚎𝚊𝚍𝚢-𝚝𝚘-𝚞𝚜𝚎 𝚏𝚘𝚕𝚍𝚎𝚛</div></div>
     <div class="feat"><div class="feat-icon">🔍</div><div class="feat-title">𝚂𝚎𝚊𝚛𝚌𝚑 & 𝙵𝚒𝚕𝚝𝚎𝚛</div><div class="feat-desc">𝙱𝚛𝚘𝚠𝚜𝚎 𝚊𝚗𝚍 𝚍𝚒𝚜𝚌𝚘𝚟𝚎𝚛 𝚙𝚞𝚋𝚕𝚒𝚜𝚑𝚎𝚍 𝚎𝚡𝚝𝚎𝚗𝚜𝚒𝚘𝚗𝚜</div></div>
     <div class="feat"><div class="feat-icon">❤️</div><div class="feat-title">𝙻𝚒𝚔𝚎 𝚂𝚢𝚜𝚝𝚎𝚖</div><div class="feat-desc">𝚂𝚝𝚊𝚛 𝚊𝚗𝚍 𝚕𝚒𝚔𝚎 𝚢𝚘𝚞𝚛 𝚏𝚊𝚟𝚘𝚛𝚒𝚝𝚎 𝚎𝚡𝚝𝚎𝚗𝚜𝚒𝚘𝚗𝚜</div></div>
     <div class="feat"><div class="feat-icon">💬</div><div class="feat-title">𝙲𝚘𝚖𝚖𝚎𝚗𝚝𝚜</div><div class="feat-desc">𝙳𝚒𝚜𝚌𝚞𝚜𝚜 𝚊𝚗𝚍 𝚐𝚒𝚟𝚎 𝚏𝚎𝚎𝚍𝚋𝚊𝚌𝚔 𝚘𝚗 𝚎𝚡𝚝𝚎𝚗𝚜𝚒𝚘𝚗𝚜</div></div>
@@ -140,7 +142,7 @@
 <div class="footer-area">
     <footer>
 
-        <table id="foot" class="footer-table" cellpadding="14" cellspacing="0">
+        <table id="foot" class="footer-table" cellpadding="14" cellspacing="50" style="text-align:left">
             <tr>
                 <th>🖥️ 𝙳𝙴𝚅𝙴𝙻𝙾𝙿𝙴𝚁</th>
                 <th>📞 𝙲𝙾𝙽𝚃𝙰𝙲𝚃</th>
@@ -199,6 +201,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   loadStats();
 });
+
+//kni app
+let p;
+window.addEventListener('beforeinstallprompt', e => {
+	e.preventDefault();
+	p = e;
+});
+function install() {
+            if (p) { p.prompt(); }
+        }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('kni.js');
+        }
+
 </script>
 </body>
 </html>
