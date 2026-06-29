@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard — KNI Platform</title>
+<link rel="stylesheet" href="/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="bg-anim"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<div id="toast-container"></div>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a class="nav-logo" href="/"><img src="/logo.png" alt="KNI" onerror="this.style.display='none'"><span>KNI Platform</span></a>
+  <div class="nav-links">
+    <a href="/dashboard.html" class="active">Dashboard</a>
+    <a href="/create.html">+ Create</a>
+    <a href="/browse.html">Browse</a>
+  </div>
+  <div class="nav-actions">
+    <div id="nav-guest" class="hidden"><a href="/login.html" class="btn btn-ghost btn-sm">Login</a></div>
+    <div id="nav-auth" class="hidden dropdown-menu">
+      <div class="avatar-sm" id="nav-avatar">?</div>
+      <div class="dropdown-content">
+        <a href="/dashboard.html">🏠 Dashboard</a>
+        <a href="/profile.html?user=" id="nav-profile-link">👤 My Profile</a>
+        <a href="/settings.html">⚙️ Settings</a>
+        <hr>
+        <a href="#" onclick="logout()">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Navigation</div>
+    <a href="/dashboard.html" class="active"><span class="icon">🏠</span> My Projects</a>
+    <a href="/create.html"><span class="icon">➕</span> Create Extension</a>
+    <a href="/browse.html"><span class="icon">🔍</span> Browse Public</a>
+    <div class="sidebar-label">Account</div>
+    <a href="/profile.html?user=" id="sidebar-profile"><span class="icon">👤</span> My Profile</a>
+    <a href="/settings.html"><span class="icon">⚙️</span> Settings</a>
+    <a href="#" onclick="logout()"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="page-header flex justify-between items-center">
+      <div>
+        <div class="page-title">My Extensions</div>
+        <div class="page-sub" id="welcome-msg">Loading...</div>
+      </div>
+      <a href="/create.html" class="btn btn-primary">➕ New Extension</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card"><div class="stat-icon orange">📁</div><div><div class="stat-value" id="stat-total">–</div><div class="stat-label">Total Projects</div></div></div>
+      <div class="stat-card"><div class="stat-icon green">🌍</div><div><div class="stat-value" id="stat-pub">–</div><div class="stat-label">Published</div></div></div>
+      <div class="stat-card"><div class="stat-icon blue">📦</div><div><div class="stat-value" id="stat-dl">–</div><div class="stat-label">Downloads</div></div></div>
+      <div class="stat-card"><div class="stat-icon purple">❤️</div><div><div class="stat-value" id="stat-likes">–</div><div class="stat-label">Total Likes</div></div></div>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="section-header">
+      <div class="section-title">All Projects</div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="form-input" placeholder="Search..." id="searchInput" style="width:200px;padding:7px 12px;font-size:.82rem;">
+        <select class="form-select" id="filterSelect" style="width:140px;padding:7px 12px;font-size:.82rem;">
+          <option value="all">All</option>
+          <option value="published">Published</option>
+          <option value="draft">Drafts</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="projects-container">
+      <div class="empty"><div class="empty-icon">⏳</div><h3>Loading...</h3></div>
+    </div>
+  </main>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">Delete Extension</div>
+      <span class="modal-close" onclick="document.getElementById('deleteModal').classList.remove('show')">✕</span>
+    </div>
+    <p style="color:var(--txt2);margin-bottom:20px;">This will permanently delete the extension and all its files from the server. This cannot be undone.</p>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-danger w-full" id="confirmDeleteBtn">🗑️ Delete Forever</button>
+      <button class="btn btn-secondary w-full" onclick="document.getElementById('deleteModal').classList.remove('show')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+if (!requireAuth()) throw new Error('redirect');
+
+let allProjects = [];
+let deleteId = null;
+
+async function loadDashboard() {
+  const user = getUser();
+  document.getElementById('welcome-msg').textContent = `Welcome back, ${user?.username || 'developer'} 👋`;
+  const link = document.getElementById('nav-profile-link');
+  const slink = document.getElementById('sidebar-profile');
+  if (link) link.href = `/profile.html?user=${user?.username}`;
+  if (slink) slink.href = `/profile.html?user=${user?.username}`;
+  try {
+    allProjects = await api.get('/api/projects');
+    updateStats();
+    renderProjects(allProjects);
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+function updateStats() {
+  const pub = allProjects.filter(p => p.is_published);
+  const dl = allProjects.reduce((a,p) => a + (p.downloads||0), 0);
+  const lk = allProjects.reduce((a,p) => a + (p.likes_count||0), 0);
+  document.getElementById('stat-total').textContent = allProjects.length;
+  document.getElementById('stat-pub').textContent = pub.length;
+  document.getElementById('stat-dl').textContent = fmtNum(dl);
+  document.getElementById('stat-likes').textContent = fmtNum(lk);
+}
+
+function renderProjects(projects) {
+  const container = document.getElementById('projects-container');
+  if (!projects.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>No extensions yet</h3><p>Create your first AI-powered Chrome extension!</p><br><a href="/create.html" class="btn btn-primary">➕ Create Extension</a></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="project-grid">${projects.map(p => `
+    <div class="project-card" onclick="window.location.href='/project.html?id=${p.id}&mine=1'">
+      <div class="project-card-icon">${p.icon_filename ? `<img src="/ext-icon/${p.user_id}/${p.folder_name}/${p.icon_filename}" style="width:100%;height:100%;border-radius:10px;object-fit:cover;" onerror="this.parentElement.innerHTML='🧩'">` : '🧩'}</div>
+      <div class="project-card-name">${escHtml(p.name)}</div>
+      <div class="project-card-desc">${escHtml(p.description || 'No description')}</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <span class="badge ${p.is_published ? 'badge-green' : 'badge-gray'}">${p.is_published ? '🌍 Published' : '📝 Draft'}</span>
+        <span class="badge badge-orange">v${escHtml(p.version)}</span>
+        ${p.tags ? p.tags.split(',').slice(0,2).map(t => `<span class="badge badge-blue">${escHtml(t.trim())}</span>`).join('') : ''}
+      </div>
+      <div class="project-card-meta">
+        <div class="project-card-stats">
+          <span class="stat-item">📦 ${fmtNum(p.downloads)}</span>
+          <span class="stat-item">❤️ ${fmtNum(p.likes_count)}</span>
+          <span class="stat-item">👁️ ${fmtNum(p.views)}</span>
+        </div>
+        <span style="color:var(--txt3);font-size:.75rem;">${timeAgo(p.updated_at)}</span>
+      </div>
+      <div class="project-card-actions" onclick="event.stopPropagation()">
+        <a href="/create.html?id=${p.id}" class="btn btn-secondary btn-sm">✏️ Edit</a>
+        <button class="btn btn-ghost btn-sm" onclick="togglePublish(${p.id},${p.is_published})" id="pub-btn-${p.id}">${p.is_published ? '🔒 Unpublish' : '🌍 Publish'}</button>
+        <a href="/api/projects/${p.id}/download" class="btn btn-ghost btn-sm">📦</a>
+        <button class="btn btn-danger btn-sm" onclick="confirmDelete(${p.id})">🗑️</button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function togglePublish(id, isPublished) {
+  try {
+    if (isPublished) {
+      await api.post(`/api/projects/${id}/unpublish`);
+      toast('Extension unpublished', 'info');
+    } else {
+      await api.post(`/api/projects/${id}/publish`);
+      toast('Extension published!', 'success');
+    }
+    allProjects = await api.get('/api/projects');
+    updateStats();
+    filterProjects();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function confirmDelete(id) {
+  deleteId = id;
+  document.getElementById('deleteModal').classList.add('show');
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+  if (!deleteId) return;
+  const btn = document.getElementById('confirmDeleteBtn');
+  showLoading(btn, 'Deleting...');
+  try {
+    await api.del(`/api/projects/${deleteId}`);
+    document.getElementById('deleteModal').classList.remove('show');
+    toast('Extension deleted', 'success');
+    allProjects = await api.get('/api/projects');
+    updateStats();
+    filterProjects();
+  } catch(e) { toast(e.message, 'error'); hideLoading(btn); }
+});
+
+function filterProjects() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filter = document.getElementById('filterSelect').value;
+  let p = allProjects;
+  if (filter === 'published') p = p.filter(x => x.is_published);
+  if (filter === 'draft') p = p.filter(x => !x.is_published);
+  if (search) p = p.filter(x => x.name.toLowerCase().includes(search) || (x.description||'').toLowerCase().includes(search) || (x.tags||'').toLowerCase().includes(search));
+  renderProjects(p);
+}
+
+document.getElementById('searchInput').addEventListener('input', filterProjects);
+document.getElementById('filterSelect').addEventListener('change', filterProjects);
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+</body>
+</html>

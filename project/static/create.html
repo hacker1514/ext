@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Create Extension — KNI Platform</title>
+<link rel="stylesheet" href="/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+.create-layout { display:grid; grid-template-columns:1fr 420px; gap:24px; }
+@media(max-width:900px){ .create-layout { grid-template-columns:1fr; } }
+.panel { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; }
+.panel-title { font-size:1rem; font-weight:700; color:var(--txt); margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.groq-status { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:var(--radius-sm); font-size:.8rem; margin-bottom:16px; }
+.groq-ok { background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); color:var(--green); }
+.groq-warn { background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.2); color:var(--yellow); }
+.file-tabs { display:flex; gap:4px; margin-bottom:12px; }
+.file-tab { padding:6px 14px; border-radius:6px; font-size:.8rem; font-weight:600; cursor:pointer; background:var(--card); border:1px solid var(--border); color:var(--txt2); transition:var(--transition); }
+.file-tab.active { background:rgba(249,115,22,0.15); border-color:rgba(249,115,22,0.4); color:var(--orange); }
+.response-area { background:rgba(0,0,0,0.35); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; font-family:'Courier New',monospace; font-size:.8rem; color:#e2e8f0; min-height:200px; max-height:350px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="bg-anim"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <a class="nav-logo" href="/"><img src="/logo.png" alt="KNI" onerror="this.style.display='none'"><span>KNI Platform</span></a>
+  <div class="nav-links">
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/create.html" class="active">+ Create</a>
+    <a href="/browse.html">Browse</a>
+  </div>
+  <div class="nav-actions">
+    <div id="nav-guest" class="hidden"><a href="/login.html" class="btn btn-ghost btn-sm">Login</a></div>
+    <div id="nav-auth" class="hidden dropdown-menu">
+      <div class="avatar-sm" id="nav-avatar">?</div>
+      <div class="dropdown-content">
+        <a href="/dashboard.html">🏠 Dashboard</a>
+        <a href="/settings.html">⚙️ Settings</a>
+        <hr><a href="#" onclick="logout()">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-label">Navigation</div>
+    <a href="/dashboard.html"><span class="icon">🏠</span> My Projects</a>
+    <a href="/create.html" class="active"><span class="icon">➕</span> Create Extension</a>
+    <a href="/browse.html"><span class="icon">🔍</span> Browse Public</a>
+    <div class="sidebar-label">Account</div>
+    <a href="/settings.html"><span class="icon">⚙️</span> Settings</a>
+    <a href="#" onclick="logout()"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-title" id="page-title">🧩 Create New Extension</div>
+      <div class="page-sub" id="page-sub">Fill in the details and use AI to generate your Chrome extension</div>
+    </div>
+
+    <div class="create-layout">
+      <!-- LEFT: Form -->
+      <div>
+        <!-- Extension Info -->
+        <div class="panel mb-6">
+          <div class="panel-title">📂 Extension Info</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">📝 Extension Name *</label>
+              <input id="extName" class="form-input" placeholder="My Awesome Extension" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🏷️ Version</label>
+              <input id="extVersion" class="form-input" value="1.0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">📖 Description</label>
+            <textarea id="extDesc" class="form-textarea" rows="2" placeholder="Describe what your extension does..."></textarea>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">👨‍💻 Author</label>
+              <input id="extAuthor" class="form-input" placeholder="Your name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">🌐 Website</label>
+              <input id="extWebsite" class="form-input" type="url" placeholder="https://...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🏷️ Tags (comma separated)</label>
+            <input id="extTags" class="form-input" placeholder="productivity, dark-mode, tab-manager">
+          </div>
+          <div class="form-group">
+            <label class="form-label">🖼️ Extension Icon</label>
+            <input id="extIcon" type="file" class="form-input" accept=".png,.jpg,.jpeg,.svg,.gif">
+          </div>
+        </div>
+
+        <!-- AI Prompt -->
+        <div class="panel mb-6">
+          <div class="panel-title">🤖 AI Prompt (Groq)</div>
+          <div id="groq-status-bar"></div>
+          <div class="form-group">
+            <label class="form-label">Describe your extension in detail</label>
+            <textarea id="prompt" class="form-textarea" rows="8" placeholder="Example: Create a Chrome extension that automatically hides YouTube recommended videos and the sidebar. When the user clicks the extension icon, it shows a toggle to enable/disable the hiding. Also add a keyboard shortcut Ctrl+Shift+H to toggle it."></textarea>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="generateBtn">🚀 Generate with AI</button>
+            <button class="btn btn-secondary" id="saveBtn" disabled>💾 Save to Server</button>
+            <button class="btn btn-ghost" id="clearBtn">🧹 Clear</button>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="panel mb-6" id="progressPanel" style="display:none;">
+          <div class="panel-title">⚡ Generation Status</div>
+          <div class="progress-track"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+          <div id="statusText" style="font-size:.875rem;color:var(--txt2);margin-top:8px;"></div>
+        </div>
+
+        <!-- AI Response -->
+        <div class="panel mb-6" id="responsePanel" style="display:none;">
+          <div class="panel-title">📜 AI Response</div>
+          <div class="response-area" id="responseBox">Waiting for AI...</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Sidebar panels -->
+      <div>
+        <!-- Generated files preview -->
+        <div class="panel mb-6" id="filesPreviewPanel">
+          <div class="panel-title">📂 Generated Files</div>
+          <div class="file-tabs">
+            <div class="file-tab active" onclick="showFileTab('manifest')">📋 manifest.json</div>
+            <div class="file-tab" onclick="showFileTab('inject')">📜 inject.js</div>
+          </div>
+          <div id="tab-manifest" class="response-area">// Generate extension to see manifest.json</div>
+          <div id="tab-inject" class="response-area" style="display:none;">// Generate extension to see inject.js</div>
+        </div>
+
+        <!-- Existing project files (edit mode) -->
+        <div class="panel mb-6" id="existingFilesPanel" style="display:none;">
+          <div class="panel-title">📁 Server Files</div>
+          <ul class="file-list" id="serverFileList"></ul>
+          <button class="btn btn-ghost btn-sm mt-4 w-full" onclick="loadProjectFiles()">🔄 Refresh</button>
+        </div>
+
+        <!-- Project actions (edit mode) -->
+        <div class="panel" id="projectActionsPanel" style="display:none;">
+          <div class="panel-title">⚙️ Project Actions</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-success w-full" id="publishBtn" onclick="handlePublish()">🌍 Publish</button>
+            <a id="downloadBtn" class="btn btn-secondary w-full" href="#">📦 Download ZIP</a>
+            <a id="viewPublicBtn" class="btn btn-ghost w-full" href="#" style="display:none;">🔗 View Public Page</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+if (!requireAuth()) throw new Error('redirect');
+
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+let aiResponse = '', manifestContent = '', injectContent = '';
+let currentProjectId = null;
+let isPublished = false;
+
+function getParams() {
+  const p = new URLSearchParams(location.search);
+  return { id: p.get('id') };
+}
+
+function setProgress(val, text) {
+  document.getElementById('progressPanel').style.display = 'block';
+  document.getElementById('progressBar').style.width = val + '%';
+  if (text) document.getElementById('statusText').textContent = text;
+}
+
+function showFileTab(tab) {
+  document.querySelectorAll('.file-tab').forEach((t,i) => t.classList.toggle('active', (i===0 && tab==='manifest') || (i===1 && tab==='inject')));
+  document.getElementById('tab-manifest').style.display = tab==='manifest' ? 'block' : 'none';
+  document.getElementById('tab-inject').style.display = tab==='inject' ? 'block' : 'none';
+}
+
+function updateGroqStatus() {
+  const key = getGroqKey();
+  const bar = document.getElementById('groq-status-bar');
+  if (key) {
+    bar.innerHTML = `<div class="groq-status groq-ok">✓ Groq API key configured</div>`;
+  } else {
+    bar.innerHTML = `<div class="groq-status groq-warn">⚠️ No Groq API key. <a href="/settings.html" style="color:var(--yellow);">Set it in Settings</a></div>`;
+  }
+}
+
+async function generateExtension() {
+  const name = document.getElementById('extName').value.trim();
+  const pr = document.getElementById('prompt').value.trim();
+  if (!name) { toast('Enter extension name', 'error'); return; }
+  if (!pr) { toast('Enter a prompt', 'error'); return; }
+  const apiKey = getGroqKey();
+  if (!apiKey) { toast('Set your Groq API key in Settings first', 'error'); setTimeout(()=>window.location.href='/settings.html',1500); return; }
+
+  const btn = document.getElementById('generateBtn');
+  showLoading(btn, 'Generating...');
+  document.getElementById('responsePanel').style.display = 'block';
+  document.getElementById('responseBox').textContent = '🤖 Calling Groq AI...';
+  setProgress(15, '📡 Connecting to Groq AI...');
+
+  try {
+    setProgress(35, '🤖 Generating extension code...');
+    const systemMsg = 'You are a Chrome Extension generator. Return ONLY two code blocks: manifest.json (Manifest V3) and inject.js. No explanation. No markdown outside code blocks.';
+    const userMsg = `Create a Chrome extension:\nName: ${name}\nVersion: ${document.getElementById('extVersion').value||'1.0'}\nDescription: ${document.getElementById('extDesc').value}\nAuthor: ${document.getElementById('extAuthor').value}\n\nUser Request:\n${pr}\n\nOUTPUT FORMAT ONLY:\n\`\`\`manifest.json\n{}\n\`\`\`\n\`\`\`inject.js\nconsole.log("loaded");\n\`\`\``;
+
+    const res = await fetch(GROQ_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({model:GROQ_MODEL,temperature:0.2,max_tokens:8000,
+        messages:[{role:'system',content:systemMsg},{role:'user',content:userMsg}]})
+    });
+    if(!res.ok) throw new Error('Groq API error: ' + res.status);
+    const data = await res.json();
+    aiResponse = data.choices[0].message.content;
+    document.getElementById('responseBox').textContent = aiResponse;
+    setProgress(70, '📄 Extracting files...');
+
+    manifestContent = extractBlock(aiResponse, 'manifest.json') || JSON.stringify({manifest_version:3,name,version:'1.0',content_scripts:[{matches:['<all_urls>'],js:['inject.js']}]},null,2);
+    injectContent = extractBlock(aiResponse, 'inject.js') || 'console.log("AI extension loaded");';
+
+    document.getElementById('tab-manifest').textContent = manifestContent;
+    document.getElementById('tab-inject').textContent = injectContent;
+    setProgress(100, '✅ Generation complete!');
+    document.getElementById('saveBtn').disabled = false;
+    toast('Extension generated successfully!', 'success');
+  } catch(e) {
+    toast(e.message, 'error');
+    setProgress(0, '❌ Generation failed');
+    document.getElementById('responseBox').textContent = '❌ ' + e.message;
+  }
+  hideLoading(btn);
+}
+
+async function saveToServer() {
+  const name = document.getElementById('extName').value.trim();
+  if (!name) { toast('Enter extension name', 'error'); return; }
+  const btn = document.getElementById('saveBtn');
+  showLoading(btn, 'Saving...');
+  setProgress(50, '💾 Saving to server...');
+  try {
+    let pid = currentProjectId;
+    if (!pid) {
+      const proj = await api.post('/api/projects', {
+        name, version: document.getElementById('extVersion').value||'1.0',
+        description: document.getElementById('extDesc').value||'',
+        author: document.getElementById('extAuthor').value||'',
+        website: document.getElementById('extWebsite').value||'',
+        tags: document.getElementById('extTags').value||''
+      });
+      pid = proj.id;
+      currentProjectId = pid;
+    } else {
+      await api.put(`/api/projects/${pid}`, {
+        name, version: document.getElementById('extVersion').value||'1.0',
+        description: document.getElementById('extDesc').value||'',
+        author: document.getElementById('extAuthor').value||'',
+        website: document.getElementById('extWebsite').value||'',
+        tags: document.getElementById('extTags').value||''
+      });
+    }
+    if (manifestContent || injectContent) {
+      await api.post(`/api/projects/${pid}/generate`, { manifest_content: manifestContent, inject_content: injectContent });
+    }
+    const iconFile = document.getElementById('extIcon').files[0];
+    if (iconFile) {
+      const fd = new FormData(); fd.append('file', iconFile);
+      await api.upload(`/api/projects/${pid}/upload-icon`, fd);
+    }
+    setProgress(100, '✅ Saved to server!');
+    document.getElementById('existingFilesPanel').style.display = 'block';
+    document.getElementById('projectActionsPanel').style.display = 'block';
+    document.getElementById('downloadBtn').href = `/api/projects/${pid}/download`;
+    await loadProjectFiles();
+    updatePublishBtn();
+    toast('Extension saved to server!', 'success');
+    history.replaceState(null,'',`/create.html?id=${pid}`);
+  } catch(e) { toast(e.message,'error'); setProgress(0,'❌ Save failed'); }
+  hideLoading(btn);
+}
+
+async function loadProjectFiles() {
+  if (!currentProjectId) return;
+  try {
+    const files = await api.get(`/api/projects/${currentProjectId}/files`);
+    const ul = document.getElementById('serverFileList');
+    if (!files.length) { ul.innerHTML = '<li style="color:var(--txt2);font-size:.82rem;padding:8px;">No files saved yet</li>'; return; }
+    ul.innerHTML = files.map(f => `<li class="file-item" onclick="previewFile('${f.name}')">
+      <div class="file-item-left"><span class="file-icon">${fileIcon(f.name)}</span><div><div class="file-name">${f.name}</div><div class="file-size">${fmtSize(f.size)}</div></div></div>
+    </li>`).join('');
+  } catch(e) {}
+}
+
+async function previewFile(name) {
+  if (!currentProjectId) return;
+  try {
+    const f = await api.get(`/api/projects/${currentProjectId}/file/${name}`);
+    if (name.endsWith('.json')) {
+      document.getElementById('tab-manifest').textContent = f.content;
+      showFileTab('manifest');
+    } else {
+      document.getElementById('tab-inject').textContent = f.content;
+      showFileTab('inject');
+    }
+    document.getElementById('responsePanel').style.display = 'block';
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function loadExistingProject(id) {
+  try {
+    const proj = await api.get(`/api/projects/${id}`);
+    currentProjectId = proj.id;
+    isPublished = !!proj.is_published;
+    document.getElementById('extName').value = proj.name;
+    document.getElementById('extVersion').value = proj.version;
+    document.getElementById('extDesc').value = proj.description||'';
+    document.getElementById('extAuthor').value = proj.author||'';
+    document.getElementById('extWebsite').value = proj.website||'';
+    document.getElementById('extTags').value = proj.tags||'';
+    document.getElementById('page-title').textContent = '✏️ Edit Extension';
+    document.getElementById('page-sub').textContent = proj.name + ' · ' + proj.folder_name;
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('existingFilesPanel').style.display = 'block';
+    document.getElementById('projectActionsPanel').style.display = 'block';
+    document.getElementById('downloadBtn').href = `/api/projects/${id}/download`;
+    updatePublishBtn();
+    if (isPublished) {
+      document.getElementById('viewPublicBtn').style.display = 'flex';
+      document.getElementById('viewPublicBtn').href = `/project.html?id=${id}`;
+    }
+    await loadProjectFiles();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function handlePublish() {
+  if (!currentProjectId) return;
+  try {
+    if (isPublished) {
+      await api.post(`/api/projects/${currentProjectId}/unpublish`);
+      isPublished = false;
+      toast('Extension unpublished','info');
+    } else {
+      await api.post(`/api/projects/${currentProjectId}/publish`);
+      isPublished = true;
+      toast('Extension published!','success');
+      document.getElementById('viewPublicBtn').style.display = 'flex';
+      document.getElementById('viewPublicBtn').href = `/project.html?id=${currentProjectId}`;
+    }
+    updatePublishBtn();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function updatePublishBtn() {
+  const btn = document.getElementById('publishBtn');
+  if (btn) btn.textContent = isPublished ? '🔒 Unpublish' : '🌍 Publish';
+  btn.className = isPublished ? 'btn btn-secondary w-full' : 'btn btn-success w-full';
+}
+
+document.getElementById('generateBtn').addEventListener('click', generateExtension);
+document.getElementById('saveBtn').addEventListener('click', saveToServer);
+document.getElementById('clearBtn').addEventListener('click', () => {
+  document.getElementById('extName').value = '';
+  document.getElementById('prompt').value = '';
+  document.getElementById('extDesc').value = '';
+  aiResponse = ''; manifestContent = ''; injectContent = '';
+  document.getElementById('responsePanel').style.display = 'none';
+  document.getElementById('progressPanel').style.display = 'none';
+  document.getElementById('tab-manifest').textContent = '// Generate extension to see manifest.json';
+  document.getElementById('tab-inject').textContent = '// Generate extension to see inject.js';
+  document.getElementById('saveBtn').disabled = true;
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateGroqStatus();
+  const user = getUser();
+  if (user) { document.getElementById('extAuthor').value = document.getElementById('extAuthor').value || user.username; }
+  const { id } = getParams();
+  if (id) loadExistingProject(id);
+});
+</script>
+</body>
+</html>

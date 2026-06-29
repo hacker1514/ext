@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Register — KNI Platform</title>
+<link rel="stylesheet" href="/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="bg-anim"><span></span><span></span><span></span><span></span><span></span></div>
+<div id="toast-container"></div>
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img src="/logo.png" alt="KNI" onerror="this.style.display='none'">
+      <div style="margin-top:10px; font-size:1.5rem; font-weight:900; background:linear-gradient(135deg,#f97316,#fb923c); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">KNI Platform</div>
+    </div>
+    <div class="auth-title">Create your account</div>
+    <div class="auth-sub">Join thousands of extension developers</div>
+
+    <form id="regForm">
+      <div class="form-group">
+        <label class="form-label">👤 Username</label>
+        <input id="username" type="text" class="form-input" placeholder="your_username" required minlength="3" pattern="[a-zA-Z0-9_]+" autocomplete="username">
+        <div class="form-hint">Letters, numbers and underscores only</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">📧 Email</label>
+        <input id="email" type="email" class="form-input" placeholder="you@example.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔑 Password</label>
+        <input id="password" type="password" class="form-input" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔑 Confirm Password</label>
+        <input id="confirm" type="password" class="form-input" placeholder="Repeat your password" required autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary w-full btn-lg" id="regBtn">
+        🚀 Create Account
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/login.html">Sign in</a>
+    </div>
+    <div class="auth-footer" style="margin-top:8px;">
+      <a href="/" style="color:#64748b; font-size:.8rem;">← Back to home</a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+redirectIfAuth();
+document.getElementById('regForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pw = document.getElementById('password').value;
+  const cf = document.getElementById('confirm').value;
+  if (pw !== cf) { toast('Passwords do not match', 'error'); return; }
+  const btn = document.getElementById('regBtn');
+  showLoading(btn, 'Creating account...');
+  try {
+    const res = await api.post('/api/auth/register', {
+      username: document.getElementById('username').value,
+      email: document.getElementById('email').value,
+      password: pw
+    });
+    setAuth(res.token, res.user);
+    toast('Account created! Welcome, ' + res.user.username + '!', 'success');
+    setTimeout(() => window.location.href = '/dashboard.html', 900);
+  } catch(err) {
+    toast(err.message, 'error');
+    hideLoading(btn);
+  }
+});
+</script>
+</body>
+</html>

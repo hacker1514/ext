@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Extension — KNI Platform</title>
+<link rel="stylesheet" href="/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+.proj-hero { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; margin-bottom:24px; display:flex; gap:24px; align-items:flex-start; }
+.proj-icon { width:80px; height:80px; border-radius:16px; background:linear-gradient(135deg,rgba(249,115,22,0.2),rgba(234,88,12,0.1)); display:flex; align-items:center; justify-content:center; font-size:2rem; flex-shrink:0; border:1px solid rgba(249,115,22,0.2); }
+.proj-meta { flex:1; }
+.proj-title { font-size:1.5rem; font-weight:800; color:var(--txt); margin-bottom:6px; }
+.proj-desc { color:var(--txt2); font-size:.9rem; line-height:1.6; margin-bottom:12px; }
+.proj-layout { display:grid; grid-template-columns:1fr 340px; gap:24px; }
+@media(max-width:900px){ .proj-layout { grid-template-columns:1fr; } .proj-hero { flex-direction:column; } }
+</style>
+</head>
+<body>
+<div class="bg-anim"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <a class="nav-logo" href="/"><img src="/logo.png" alt="KNI" onerror="this.style.display='none'"><span>KNI Platform</span></a>
+  <div class="nav-links">
+    <a href="/browse.html">Browse</a>
+    <a href="/create.html">+ Create</a>
+  </div>
+  <div class="nav-actions">
+    <div id="nav-guest"><a href="/login.html" class="btn btn-ghost btn-sm">Login</a>&nbsp;<a href="/register.html" class="btn btn-primary btn-sm">Register</a></div>
+    <div id="nav-auth" class="hidden dropdown-menu">
+      <div class="avatar-sm" id="nav-avatar">?</div>
+      <div class="dropdown-content">
+        <a href="/dashboard.html">🏠 Dashboard</a>
+        <a href="/settings.html">⚙️ Settings</a>
+        <hr><a href="#" onclick="logout()">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main style="max-width:1100px;margin:0 auto;padding:32px 20px;">
+  <div id="loading" class="empty"><div class="empty-icon">⏳</div><h3>Loading extension...</h3></div>
+  <div id="content" style="display:none;">
+    <!-- Hero -->
+    <div class="proj-hero">
+      <div class="proj-icon" id="proj-icon">🧩</div>
+      <div class="proj-meta">
+        <div class="proj-title" id="proj-name">Loading...</div>
+        <div class="proj-desc" id="proj-desc"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+          <span class="badge badge-orange" id="proj-version"></span>
+          <span class="badge badge-green">🌍 Published</span>
+          <span id="proj-tags"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+          <a id="proj-author-link" href="#" style="color:var(--orange);text-decoration:none;font-weight:600;font-size:.9rem;">@<span id="proj-author"></span></a>
+          <span style="color:var(--txt3);font-size:.82rem;" id="proj-date"></span>
+          <span style="color:var(--txt3);font-size:.82rem;">Author: <span id="proj-ext-author"></span></span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;" id="proj-actions">
+        <button class="btn btn-primary" onclick="downloadExt()">📦 Download ZIP</button>
+        <button class="btn btn-ghost" id="likeBtn" onclick="toggleLike()">❤️ Like</button>
+        <div id="owner-actions" style="display:none;display:flex;flex-direction:column;gap:8px;">
+          <a id="edit-link" href="#" class="btn btn-secondary">✏️ Edit</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+      <div class="stat-card"><div class="stat-icon blue">📦</div><div><div class="stat-value" id="s-dl">0</div><div class="stat-label">Downloads</div></div></div>
+      <div class="stat-card"><div class="stat-icon orange">❤️</div><div><div class="stat-value" id="s-likes">0</div><div class="stat-label">Likes</div></div></div>
+      <div class="stat-card"><div class="stat-icon purple">👁️</div><div><div class="stat-value" id="s-views">0</div><div class="stat-label">Views</div></div></div>
+      <div class="stat-card"><div class="stat-icon green">📅</div><div><div class="stat-value" id="s-date" style="font-size:1rem;">—</div><div class="stat-label">Published</div></div></div>
+    </div>
+
+    <div class="proj-layout">
+      <!-- Left: Files + Comments -->
+      <div>
+        <!-- File viewer -->
+        <div class="card mb-6">
+          <div class="card-title">📂 Extension Files</div>
+          <div class="tabs" id="file-tabs"></div>
+          <div id="file-content" class="code-block" style="min-height:200px;">Select a file to preview</div>
+        </div>
+
+        <!-- Comments -->
+        <div class="card">
+          <div class="card-title">💬 Comments (<span id="comment-count">0</span>)</div>
+          <div id="comment-form" style="display:none;margin-bottom:20px;">
+            <textarea class="form-textarea" id="commentInput" rows="3" placeholder="Write a comment..."></textarea>
+            <button class="btn btn-primary btn-sm mt-4" onclick="submitComment()">Post Comment</button>
+          </div>
+          <div id="login-to-comment" style="margin-bottom:20px;">
+            <a href="/login.html" class="btn btn-ghost btn-sm">Login to comment</a>
+          </div>
+          <div id="comments-list"></div>
+        </div>
+      </div>
+
+      <!-- Right: Sidebar -->
+      <div>
+        <!-- About -->
+        <div class="card mb-6" id="about-card">
+          <div class="card-title">ℹ️ About</div>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:.875rem;">
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--txt3);">Folder</span><span style="color:var(--txt);font-family:monospace;" id="ab-folder"></span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--txt3);">Version</span><span style="color:var(--txt);" id="ab-version"></span></div>
+            <div id="ab-website-row" style="display:flex;justify-content:space-between; display:none;"><span style="color:var(--txt3);">Website</span><a id="ab-website" href="#" target="_blank" style="color:var(--orange);">Visit</a></div>
+          </div>
+        </div>
+
+        <!-- Developer -->
+        <div class="card mb-6">
+          <div class="card-title">👤 Developer</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div class="avatar-sm" style="width:44px;height:44px;font-size:1rem;" id="dev-avatar">?</div>
+            <div>
+              <a id="dev-name" href="#" style="font-weight:700;color:var(--txt);text-decoration:none;display:block;"></a>
+              <div id="dev-bio" style="font-size:.8rem;color:var(--txt3);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Install instructions -->
+        <div class="card">
+          <div class="card-title">🚀 How to Install</div>
+          <ol style="padding-left:18px;color:var(--txt2);font-size:.82rem;line-height:2;">
+            <li>Click <strong>Download ZIP</strong> above</li>
+            <li>Extract the ZIP file</li>
+            <li>Open Chrome → <code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">chrome://extensions</code></li>
+            <li>Enable <strong>Developer Mode</strong> (top right)</li>
+            <li>Click <strong>Load unpacked</strong></li>
+            <li>Select the extracted folder</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const projectId = params.get('id');
+const isMine = params.get('mine') === '1';
+let project = null;
+
+async function loadProject() {
+  if (!projectId) { window.location.href = '/browse.html'; return; }
+  try {
+    if (isMine && getToken()) {
+      project = await api.get(`/api/projects/${projectId}`);
+      project.username = getUser()?.username;
+      project.user_liked = false;
+    } else {
+      project = await api.get(`/api/public/projects/${projectId}`);
+    }
+    renderProject();
+    loadFiles();
+    loadComments();
+  } catch(e) {
+    document.getElementById('loading').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><h3>Extension not found</h3><p>${e.message}</p><br><a href="/browse.html" class="btn btn-primary">Browse Extensions</a></div>`;
+  }
+}
+
+function renderProject() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+  document.title = project.name + ' — KNI Platform';
+
+  if (project.icon_filename) {
+    document.getElementById('proj-icon').innerHTML = `<img src="/ext-icon/${project.user_id}/${project.folder_name}/${project.icon_filename}" style="width:100%;height:100%;border-radius:14px;object-fit:cover;" onerror="this.parentElement.innerHTML='🧩'">`;
+  }
+  document.getElementById('proj-name').textContent = project.name;
+  document.getElementById('proj-desc').textContent = project.description || 'No description provided.';
+  document.getElementById('proj-version').textContent = 'v' + project.version;
+  document.getElementById('proj-author').textContent = project.username;
+  document.getElementById('proj-author-link').href = `/profile.html?user=${project.username}`;
+  document.getElementById('proj-ext-author').textContent = project.author || project.username;
+  document.getElementById('proj-date').textContent = timeAgo(project.publish_date || project.created_at);
+  if (project.tags) {
+    document.getElementById('proj-tags').innerHTML = project.tags.split(',').slice(0,4).map(t => `<span class="badge badge-blue">${t.trim()}</span>`).join('');
+  }
+  document.getElementById('s-dl').textContent = fmtNum(project.downloads);
+  document.getElementById('s-likes').textContent = fmtNum(project.likes_count);
+  document.getElementById('s-views').textContent = fmtNum(project.views);
+  document.getElementById('s-date').textContent = fmtDate(project.publish_date);
+  document.getElementById('ab-folder').textContent = project.folder_name;
+  document.getElementById('ab-version').textContent = 'v' + project.version;
+  if (project.website) {
+    document.getElementById('ab-website-row').style.display = 'flex';
+    document.getElementById('ab-website').href = project.website;
+  }
+  document.getElementById('dev-avatar').textContent = initials(project.username);
+  document.getElementById('dev-name').textContent = project.username;
+  document.getElementById('dev-name').href = `/profile.html?user=${project.username}`;
+  if (project.user_bio) document.getElementById('dev-bio').textContent = project.user_bio;
+
+  const likeBtn = document.getElementById('likeBtn');
+  likeBtn.className = `btn btn-sm ${project.user_liked ? 'btn-danger' : 'btn-ghost'}`;
+  likeBtn.textContent = (project.user_liked ? '❤️ Liked' : '🤍 Like') + ' (' + fmtNum(project.likes_count) + ')';
+
+  const user = getUser();
+  if (user && project.user_id) {
+    const owns = user.id === project.user_id || (project.username === user.username);
+    if (owns) {
+      document.getElementById('owner-actions').style.display = 'flex';
+      document.getElementById('edit-link').href = `/create.html?id=${projectId}`;
+    }
+  }
+  if (getToken()) {
+    document.getElementById('comment-form').style.display = 'block';
+    document.getElementById('login-to-comment').style.display = 'none';
+  }
+}
+
+async function loadFiles() {
+  const endpoint = isMine && getToken() ? `/api/projects/${projectId}/files` : null;
+  const tabsEl = document.getElementById('file-tabs');
+  const contentEl = document.getElementById('file-content');
+  if (!endpoint) {
+    const knownFiles = ['manifest.json','inject.js'];
+    tabsEl.innerHTML = knownFiles.map(f => `<div class="tab" onclick="loadPublicFile('${f}',this)">${fileIcon(f)} ${f}</div>`).join('');
+    tabsEl.querySelector('.tab').click();
+    return;
+  }
+  try {
+    const files = await api.get(endpoint);
+    if (!files.length) { tabsEl.innerHTML = '<div style="color:var(--txt3);font-size:.82rem;padding:8px;">No files</div>'; return; }
+    tabsEl.innerHTML = files.map(f => `<div class="tab" onclick="loadMyFile('${f.name}',this)">${fileIcon(f.name)} ${f.name}</div>`).join('');
+    tabsEl.querySelector('.tab').click();
+  } catch(e) {}
+}
+
+async function loadPublicFile(filename, tab) {
+  document.querySelectorAll('#file-tabs .tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  const el = document.getElementById('file-content');
+  el.textContent = 'Loading...';
+  try {
+    const f = await api.get(`/api/public/files/${projectId}/${filename}`);
+    el.textContent = f.content;
+  } catch(e) { el.textContent = '// File not available'; }
+}
+
+async function loadMyFile(filename, tab) {
+  document.querySelectorAll('#file-tabs .tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  const el = document.getElementById('file-content');
+  el.textContent = 'Loading...';
+  try {
+    const f = await api.get(`/api/projects/${projectId}/file/${filename}`);
+    el.textContent = f.content;
+  } catch(e) { el.textContent = '// File not available'; }
+}
+
+async function downloadExt() {
+  try {
+    await api.download(`/api/projects/${projectId}/download`, (project?.folder_name || 'extension') + '.zip');
+    toast('Download started!','success');
+    document.getElementById('s-dl').textContent = fmtNum((project?.downloads||0)+1);
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function toggleLike() {
+  if (!getToken()) { window.location.href='/login.html'; return; }
+  try {
+    const res = await api.post(`/api/projects/${projectId}/like`);
+    project.user_liked = res.liked;
+    project.likes_count = res.likes_count;
+    const btn = document.getElementById('likeBtn');
+    btn.className = `btn btn-sm ${res.liked ? 'btn-danger' : 'btn-ghost'}`;
+    btn.textContent = (res.liked ? '❤️ Liked' : '🤍 Like') + ' (' + fmtNum(res.likes_count) + ')';
+    document.getElementById('s-likes').textContent = fmtNum(res.likes_count);
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function loadComments() {
+  try {
+    const comments = await api.get(`/api/projects/${projectId}/comments`);
+    document.getElementById('comment-count').textContent = comments.length;
+    const list = document.getElementById('comments-list');
+    if (!comments.length) {
+      list.innerHTML = '<div style="color:var(--txt3);font-size:.875rem;text-align:center;padding:20px;">No comments yet. Be the first!</div>';
+      return;
+    }
+    const myId = getUser()?.id;
+    list.innerHTML = comments.map(c => `
+      <div class="comment">
+        <div class="comment-avatar">${initials(c.username)}</div>
+        <div class="comment-body">
+          <div class="comment-header">
+            <a href="/profile.html?user=${c.username}" class="comment-author" style="text-decoration:none;color:var(--txt);">@${c.username}</a>
+            <span class="comment-time">${timeAgo(c.created_at)}</span>
+            ${myId===c.user_id ? `<span class="comment-delete" onclick="deleteComment(${c.id})">✕ Delete</span>`:''}
+          </div>
+          <div class="comment-text">${escHtml(c.content)}</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function submitComment() {
+  const input = document.getElementById('commentInput');
+  if (!input.value.trim()) return;
+  try {
+    await api.post(`/api/projects/${projectId}/comments`, { content: input.value.trim() });
+    input.value = '';
+    toast('Comment posted!','success');
+    await loadComments();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteComment(id) {
+  if (!window.confirm('Delete this comment?')) return;
+  try {
+    await api.del(`/api/comments/${id}`);
+    toast('Comment deleted','info');
+    await loadComments();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.addEventListener('DOMContentLoaded', loadProject);
+</script>
+</body>
+</html>

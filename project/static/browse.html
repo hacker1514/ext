@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Browse Extensions — KNI Platform</title>
+<link rel="stylesheet" href="/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="bg-anim"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <a class="nav-logo" href="/"><img src="/logo.png" alt="KNI" onerror="this.style.display='none'"><span>KNI Platform</span></a>
+  <div class="nav-links">
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/create.html">+ Create</a>
+    <a href="/browse.html" class="active">Browse</a>
+  </div>
+  <div class="nav-actions">
+    <div id="nav-guest"><a href="/login.html" class="btn btn-ghost btn-sm">Login</a>&nbsp;<a href="/register.html" class="btn btn-primary btn-sm">Register</a></div>
+    <div id="nav-auth" class="hidden dropdown-menu">
+      <div class="avatar-sm" id="nav-avatar">?</div>
+      <div class="dropdown-content">
+        <a href="/dashboard.html">🏠 Dashboard</a>
+        <a href="/settings.html">⚙️ Settings</a>
+        <hr><a href="#" onclick="logout()">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main style="max-width:1200px;margin:0 auto;padding:32px 20px;">
+  <div class="page-header">
+    <div class="page-title">🔍 Browse Extensions</div>
+    <div class="page-sub">Discover and download community-built Chrome extensions</div>
+  </div>
+
+  <!-- Search & Filters -->
+  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+    <div class="search-bar" style="flex:1;min-width:220px;">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Search extensions..." oninput="onSearch()">
+      <button class="btn btn-primary btn-sm" onclick="doSearch()">Search</button>
+    </div>
+    <select class="form-select" id="sortSelect" onchange="doSearch()" style="width:160px;padding:10px 14px;">
+      <option value="recent">🕐 Most Recent</option>
+      <option value="popular">📦 Most Downloaded</option>
+      <option value="liked">❤️ Most Liked</option>
+      <option value="views">👁️ Most Viewed</option>
+    </select>
+    <input type="text" id="tagFilter" class="form-input" placeholder="Filter by tag..." oninput="doSearch()" style="width:160px;">
+  </div>
+
+  <!-- Popular tags -->
+  <div id="popular-tags" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;"></div>
+
+  <!-- Results count -->
+  <div id="results-info" style="color:var(--txt2);font-size:.875rem;margin-bottom:16px;"></div>
+
+  <!-- Grid -->
+  <div id="projects-grid">
+    <div class="empty"><div class="empty-icon">⏳</div><h3>Loading extensions...</h3></div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="pagination"></div>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+let currentPage = 1;
+let searchTimeout = null;
+
+function onSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(doSearch, 400);
+}
+
+async function doSearch(page = 1) {
+  currentPage = page;
+  const search = document.getElementById('searchInput').value.trim();
+  const sort = document.getElementById('sortSelect').value;
+  const tag = document.getElementById('tagFilter').value.trim();
+  const params = new URLSearchParams({ search, sort, tag, page, limit: 12 });
+  const grid = document.getElementById('projects-grid');
+  grid.innerHTML = `<div class="empty"><div class="empty-icon">⏳</div><h3>Loading...</h3></div>`;
+  try {
+    const res = await api.get(`/api/public/projects?${params}`);
+    document.getElementById('results-info').textContent = `${res.total} extension${res.total!==1?'s':''} found`;
+    renderGrid(res.projects);
+    renderPagination(res.page, res.pages);
+  } catch(e) {
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><h3>Error loading extensions</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function renderGrid(projects) {
+  const grid = document.getElementById('projects-grid');
+  if (!projects.length) {
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>No extensions found</h3><p>Try a different search term or be the first to publish!</p><br><a href="/register.html" class="btn btn-primary">Start Building</a></div>`;
+    return;
+  }
+  grid.innerHTML = `<div class="project-grid">${projects.map(p => `
+    <div class="project-card" onclick="window.location.href='/project.html?id=${p.id}'">
+      <div class="project-card-icon">${p.icon_filename ? `<img src="/ext-icon/${p.user_id}/${p.folder_name}/${p.icon_filename}" style="width:100%;height:100%;border-radius:10px;object-fit:cover;" onerror="this.parentElement.innerHTML='🧩'">` : '🧩'}</div>
+      <div class="project-card-name">${escHtml(p.name)}</div>
+      <div class="project-card-desc">${escHtml(p.description||'No description provided.')}</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <span class="badge badge-orange">v${escHtml(p.version)}</span>
+        ${p.tags ? p.tags.split(',').slice(0,3).map(t=>`<span class="badge badge-blue" onclick="event.stopPropagation();setTag('${escHtml(t.trim())}')">${escHtml(t.trim())}</span>`).join(''):''}
+      </div>
+      <div class="project-card-meta">
+        <div class="project-card-stats">
+          <span class="stat-item">📦 ${fmtNum(p.downloads)}</span>
+          <span class="stat-item">❤️ ${fmtNum(p.likes_count)}</span>
+          <span class="stat-item">👁️ ${fmtNum(p.views)}</span>
+        </div>
+        <a href="/profile.html?user=${escHtml(p.username)}" onclick="event.stopPropagation()" style="color:var(--orange);font-size:.75rem;text-decoration:none;">@${escHtml(p.username)}</a>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function renderPagination(page, pages) {
+  const el = document.getElementById('pagination');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  if (page > 1) html += `<div class="page-btn" onclick="doSearch(${page-1})">‹</div>`;
+  for (let i = Math.max(1,page-2); i <= Math.min(pages,page+2); i++) {
+    html += `<div class="page-btn ${i===page?'active':''}" onclick="doSearch(${i})">${i}</div>`;
+  }
+  if (page < pages) html += `<div class="page-btn" onclick="doSearch(${page+1})">›</div>`;
+  el.innerHTML = html;
+}
+
+function setTag(tag) {
+  document.getElementById('tagFilter').value = tag;
+  doSearch();
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const POPULAR_TAGS = ['productivity','dark-mode','tab-manager','youtube','gmail','developer','automation','privacy','download','bookmark'];
+document.getElementById('popular-tags').innerHTML = POPULAR_TAGS.map(t =>
+  `<span class="tag" onclick="setTag('${t}')"># ${t}</span>`).join('');
+
+document.addEventListener('DOMContentLoaded', () => doSearch());
+document.getElementById('searchInput').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+</script>
+</body>
+</html>

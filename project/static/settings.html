@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Settings — KNI Platform</title>
+<link rel="stylesheet" href="/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="bg-anim"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <a class="nav-logo" href="/"><img src="/logo.png" alt="KNI" onerror="this.style.display='none'"><span>KNI Platform</span></a>
+  <div class="nav-links">
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/browse.html">Browse</a>
+  </div>
+  <div class="nav-actions">
+    <div id="nav-guest" class="hidden"><a href="/login.html" class="btn btn-ghost btn-sm">Login</a></div>
+    <div id="nav-auth" class="hidden dropdown-menu">
+      <div class="avatar-sm" id="nav-avatar">?</div>
+      <div class="dropdown-content">
+        <a href="/dashboard.html">🏠 Dashboard</a>
+        <a href="/settings.html" class="active">⚙️ Settings</a>
+        <hr><a href="#" onclick="logout()">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-label">Navigation</div>
+    <a href="/dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/create.html"><span class="icon">➕</span> Create Extension</a>
+    <a href="/browse.html"><span class="icon">🔍</span> Browse Public</a>
+    <div class="sidebar-label">Settings</div>
+    <a href="/settings.html" class="active"><span class="icon">⚙️</span> Settings</a>
+    <a href="#" onclick="logout()"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <main class="main-content" style="max-width:640px;">
+    <div class="page-header">
+      <div class="page-title">⚙️ Settings</div>
+      <div class="page-sub">Manage your account preferences and API keys</div>
+    </div>
+
+    <!-- Account Info -->
+    <div class="card mb-6">
+      <div class="card-title">👤 Account Info</div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+        <div class="avatar-lg" id="settings-avatar" style="width:60px;height:60px;font-size:1.4rem;">?</div>
+        <div>
+          <div style="font-weight:700;font-size:1.1rem;" id="s-username">Loading...</div>
+          <div style="color:var(--txt2);font-size:.875rem;" id="s-email">...</div>
+          <div style="color:var(--txt3);font-size:.78rem;margin-top:2px;">Joined <span id="s-joined">...</span></div>
+        </div>
+      </div>
+      <a id="my-profile-link" href="#" class="btn btn-ghost btn-sm">👤 View Public Profile</a>
+    </div>
+
+    <!-- Profile -->
+    <div class="card mb-6">
+      <div class="card-title">✏️ Edit Profile</div>
+      <form id="profileForm">
+        <div class="form-group">
+          <label class="form-label">📝 Bio</label>
+          <textarea id="bio" class="form-textarea" rows="3" placeholder="Tell others about yourself..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">🌐 Website</label>
+          <input id="website" type="url" class="form-input" placeholder="https://yourwebsite.com">
+        </div>
+        <button type="submit" class="btn btn-primary" id="profileBtn">💾 Save Profile</button>
+      </form>
+    </div>
+
+    <!-- Groq API Key -->
+    <div class="card mb-6">
+      <div class="card-title">🤖 Groq API Key</div>
+      <p style="color:var(--txt2);font-size:.875rem;margin-bottom:16px;">Your Groq API key is stored locally in your browser and used to generate Chrome extensions with AI. <a href="https://console.groq.com" target="_blank" style="color:var(--orange);">Get a free key →</a></p>
+      <div class="form-group">
+        <label class="form-label">API Key</label>
+        <input id="groqKey" type="password" class="form-input" placeholder="gsk_...">
+        <div class="form-hint">Stored only in your browser — never sent to our server</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" onclick="saveGroqKey()">💾 Save Key</button>
+        <button class="btn btn-ghost" onclick="toggleGroqVisibility()">👁️ Show</button>
+        <button class="btn btn-danger btn-sm" onclick="clearGroqKey()">✕ Clear</button>
+      </div>
+      <div id="groq-key-status" style="margin-top:10px;font-size:.82rem;"></div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="card mb-6">
+      <div class="card-title">🔑 Change Password</div>
+      <form id="passwordForm">
+        <div class="form-group">
+          <label class="form-label">Current Password</label>
+          <input id="oldPass" type="password" class="form-input" placeholder="Your current password" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input id="newPass" type="password" class="form-input" placeholder="At least 6 characters" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm New Password</label>
+          <input id="confirmPass" type="password" class="form-input" placeholder="Repeat new password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="passBtn">🔑 Change Password</button>
+      </form>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="card" style="border-color:rgba(239,68,68,0.3);">
+      <div class="card-title" style="color:var(--red);">⚠️ Danger Zone</div>
+      <p style="color:var(--txt2);font-size:.875rem;margin-bottom:16px;">Once you log out, you'll need your credentials to log back in.</p>
+      <button class="btn btn-danger" onclick="logout()">🚪 Logout from this device</button>
+    </div>
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+if (!requireAuth()) throw new Error('redirect');
+
+async function loadSettings() {
+  try {
+    const user = await api.get('/api/auth/me');
+    const localUser = getUser();
+    document.getElementById('settings-avatar').textContent = initials(user.username);
+    document.getElementById('s-username').textContent = '@' + user.username;
+    document.getElementById('s-email').textContent = user.email;
+    document.getElementById('s-joined').textContent = fmtDate(user.created_at);
+    document.getElementById('bio').value = user.bio || '';
+    document.getElementById('website').value = user.website || '';
+    document.getElementById('my-profile-link').href = `/profile.html?user=${user.username}`;
+    localStorage.setItem('kni_user', JSON.stringify({...localUser, ...user}));
+  } catch(e) { toast(e.message,'error'); }
+
+  const key = getGroqKey();
+  const statusEl = document.getElementById('groq-key-status');
+  if (key) {
+    document.getElementById('groqKey').value = key;
+    statusEl.innerHTML = '<span style="color:var(--green);">✓ API key is set</span>';
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--yellow);">⚠️ No API key set — required for AI generation</span>';
+  }
+}
+
+document.getElementById('profileForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('profileBtn');
+  showLoading(btn,'Saving...');
+  try {
+    await api.put('/api/auth/profile', { bio: document.getElementById('bio').value, website: document.getElementById('website').value });
+    toast('Profile updated!','success');
+  } catch(err) { toast(err.message,'error'); }
+  hideLoading(btn);
+});
+
+document.getElementById('passwordForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const newPass = document.getElementById('newPass').value;
+  const confirm = document.getElementById('confirmPass').value;
+  if (newPass !== confirm) { toast('Passwords do not match','error'); return; }
+  const btn = document.getElementById('passBtn');
+  showLoading(btn,'Changing...');
+  try {
+    await api.put('/api/auth/password', { old_password: document.getElementById('oldPass').value, new_password: newPass });
+    toast('Password changed successfully!','success');
+    document.getElementById('passwordForm').reset();
+  } catch(err) { toast(err.message,'error'); }
+  hideLoading(btn);
+});
+
+function saveGroqKey() {
+  const key = document.getElementById('groqKey').value.trim();
+  if (!key) { toast('Enter an API key','error'); return; }
+  localStorage.setItem('kni_groq_key', key);
+  toast('Groq API key saved!','success');
+  document.getElementById('groq-key-status').innerHTML = '<span style="color:var(--green);">✓ API key is set</span>';
+}
+
+function clearGroqKey() {
+  localStorage.removeItem('kni_groq_key');
+  document.getElementById('groqKey').value = '';
+  document.getElementById('groq-key-status').innerHTML = '<span style="color:var(--yellow);">⚠️ API key cleared</span>';
+  toast('Groq API key cleared','info');
+}
+
+let groqVisible = false;
+function toggleGroqVisibility() {
+  groqVisible = !groqVisible;
+  document.getElementById('groqKey').type = groqVisible ? 'text' : 'password';
+}
+
+document.addEventListener('DOMContentLoaded', loadSettings);
+</script>
+</body>
+</html>

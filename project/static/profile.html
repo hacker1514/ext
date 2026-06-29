@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Profile — KNI Platform</title>
+<link rel="stylesheet" href="/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="bg-anim"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <a class="nav-logo" href="/"><img src="/logo.png" alt="KNI" onerror="this.style.display='none'"><span>KNI Platform</span></a>
+  <div class="nav-links">
+    <a href="/browse.html">Browse</a>
+    <a href="/create.html">+ Create</a>
+  </div>
+  <div class="nav-actions">
+    <div id="nav-guest"><a href="/login.html" class="btn btn-ghost btn-sm">Login</a>&nbsp;<a href="/register.html" class="btn btn-primary btn-sm">Register</a></div>
+    <div id="nav-auth" class="hidden dropdown-menu">
+      <div class="avatar-sm" id="nav-avatar">?</div>
+      <div class="dropdown-content">
+        <a href="/dashboard.html">🏠 Dashboard</a>
+        <a href="/settings.html">⚙️ Settings</a>
+        <hr><a href="#" onclick="logout()">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main style="max-width:1000px;margin:0 auto;padding:32px 20px;">
+  <div id="loading" class="empty"><div class="empty-icon">⏳</div><h3>Loading profile...</h3></div>
+  <div id="content" style="display:none;">
+    <!-- Profile header -->
+    <div class="profile-header">
+      <div class="avatar-lg" id="av-lg">?</div>
+      <div style="flex:1;">
+        <div style="font-size:1.6rem;font-weight:800;color:var(--txt);" id="p-username">Loading...</div>
+        <div style="color:var(--txt2);font-size:.875rem;margin:6px 0;" id="p-bio"></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;">
+          <span style="color:var(--txt3);font-size:.82rem;">📅 Joined <span id="p-joined"></span></span>
+          <a id="p-website" href="#" target="_blank" style="color:var(--orange);font-size:.82rem;display:none;">🌐 Website</a>
+        </div>
+      </div>
+      <div id="own-actions" style="display:none;">
+        <a href="/settings.html" class="btn btn-secondary btn-sm">⚙️ Edit Profile</a>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:28px;">
+      <div class="stat-card"><div class="stat-icon orange">📁</div><div><div class="stat-value" id="ps-proj">0</div><div class="stat-label">Extensions</div></div></div>
+      <div class="stat-card"><div class="stat-icon blue">📦</div><div><div class="stat-value" id="ps-dl">0</div><div class="stat-label">Downloads</div></div></div>
+      <div class="stat-card"><div class="stat-icon purple">❤️</div><div><div class="stat-value" id="ps-likes">0</div><div class="stat-label">Likes</div></div></div>
+      <div class="stat-card"><div class="stat-icon green">👁️</div><div><div class="stat-value" id="ps-views">0</div><div class="stat-label">Views</div></div></div>
+    </div>
+
+    <!-- Published extensions -->
+    <div class="section-header">
+      <div class="section-title" id="proj-section-title">Published Extensions</div>
+    </div>
+    <div id="user-projects">
+      <div class="empty"><div class="empty-icon">📭</div><h3>No published extensions</h3><p>This developer hasn't published any extensions yet.</p></div>
+    </div>
+  </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script>
+async function loadProfile() {
+  const params = new URLSearchParams(location.search);
+  const username = params.get('user');
+  if (!username) { window.location.href='/browse.html'; return; }
+  try {
+    const res = await api.get(`/api/users/${username}`);
+    const { user, projects, stats, is_own } = res;
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    document.title = '@' + user.username + ' — KNI Platform';
+    document.getElementById('av-lg').textContent = initials(user.username);
+    document.getElementById('p-username').textContent = '@' + user.username;
+    document.getElementById('p-bio').textContent = user.bio || 'No bio yet.';
+    document.getElementById('p-joined').textContent = fmtDate(user.created_at);
+    if (user.website) {
+      const ws = document.getElementById('p-website');
+      ws.style.display = 'inline';
+      ws.href = user.website;
+    }
+    if (is_own) document.getElementById('own-actions').style.display = 'block';
+    document.getElementById('ps-proj').textContent = fmtNum(stats.total_projects||0);
+    document.getElementById('ps-dl').textContent = fmtNum(stats.total_downloads||0);
+    document.getElementById('ps-likes').textContent = fmtNum(stats.total_likes||0);
+    document.getElementById('ps-views').textContent = fmtNum(stats.total_views||0);
+    if (is_own) document.getElementById('proj-section-title').textContent = 'Your Published Extensions';
+    renderProjects(projects);
+  } catch(e) {
+    document.getElementById('loading').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><h3>User not found</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function renderProjects(projects) {
+  const el = document.getElementById('user-projects');
+  if (!projects.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>No published extensions</h3></div>`; return; }
+  el.innerHTML = `<div class="project-grid">${projects.map(p => `
+    <div class="project-card" onclick="window.location.href='/project.html?id=${p.id}'">
+      <div class="project-card-icon">${p.icon_filename ? `<img src="/ext-icon/${p.user_id}/${p.folder_name}/${p.icon_filename}" style="width:100%;height:100%;border-radius:10px;object-fit:cover;" onerror="this.parentElement.innerHTML='🧩'">` : '🧩'}</div>
+      <div class="project-card-name">${escHtml(p.name)}</div>
+      <div class="project-card-desc">${escHtml(p.description||'No description.')}</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+        <span class="badge badge-orange">v${escHtml(p.version)}</span>
+        ${p.tags ? p.tags.split(',').slice(0,2).map(t=>`<span class="badge badge-blue">${escHtml(t.trim())}</span>`).join(''):''}
+      </div>
+      <div class="project-card-meta">
+        <div class="project-card-stats">
+          <span class="stat-item">📦 ${fmtNum(p.downloads)}</span>
+          <span class="stat-item">❤️ ${fmtNum(p.likes_count)}</span>
+          <span class="stat-item">👁️ ${fmtNum(p.views)}</span>
+        </div>
+        <span style="color:var(--txt3);font-size:.75rem;">${timeAgo(p.publish_date)}</span>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.addEventListener('DOMContentLoaded', loadProfile);
+</script>
+</body>
+</html>
